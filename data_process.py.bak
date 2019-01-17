@@ -1,0 +1,77 @@
+#!/usr/bin/python2.7
+
+
+from sys import exit
+import shutil
+
+
+FIN = 'News_info_%s.txt.filt'
+Flabel = 'News_pic_label_%s.txt'
+NULL = 'NULL'
+FPIC = 'did_pic'
+DSTS = ('oridata/%s/0', 'oridata/%s/1')
+SRC = 'Pic_info_%s'
+
+
+if __name__ == '__main__':
+    for key in ('train','validation','test'):
+        FLABEL=Flabel %key
+        dlabel = {}
+        line_count = 0
+        for raw_line in open(FLABEL):
+
+        line_count += 1
+        line = raw_line.rstrip('\r\n')
+        items = line.split('\t')
+        assert len(items) >= 4, '%d\t%d' % (line_count, len(items))
+        did = items[0]
+        label = items[1]
+        pics = items[2]
+        txts = items[3:]
+
+        label = int(label)
+        if pics == NULL:
+            pics = []
+        else:
+            pics = pics.split(';')
+        if len(txts) == 1 and txts[0] == NULL:
+            txts = []
+
+        dlabel[did] = (label, pics)
+
+    fout = open(FPIC, 'w')
+    for raw_line in open(FIN% key):
+
+        line = raw_line.rstrip('\r\n')
+        did, txt, pics = line.split('\t')
+        if pics == NULL:
+            pics = []
+        else:
+            pics = pics.split(';')
+
+        label, rec_pics = dlabel[did]
+        if label not in (0, 1):
+            continue
+        if label == 1:
+            cur_pics = rec_pics
+        else:
+            cur_pics = pics
+        for pic in cur_pics:
+
+            fout.write('%s\t%d\t%s\n' % (did, label, pic))
+
+    fout.close()
+
+    dpic = {}
+    for raw_line in open(FPIC):
+
+        line = raw_line.rstrip('\r\n')
+        did, label, pic = line.split('\t')
+        label = int(label)
+        if pic in dpic:
+            continue
+        shutil.copy('%s/%s' % (SRC % key, pic), '%s/%s' % (DSTS[label]%key, pic))
+        dpic[pic] = 1
+
+
+    exit(0)
